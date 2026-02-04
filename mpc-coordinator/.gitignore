@@ -1,0 +1,34 @@
+.env
+node_modules/
+dist/
+build/
+logs/
+*.log
+
+# C++ build artifacts
+*.o
+*.so
+*.a
+*.node
+
+# Prisma
+prisma/migrations/*_migration.sql
+
+# SoftHSM
+.softhsm/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+package-lock.json

@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Participant information
+model Player {
+  id          String   @id @default(cuid())
+  playerId    String   @unique // Unique player ID (e.g., "player1")
+  name        String
+  endpoint    String? // REST API endpoint for this player
+  publicKey   String? // Public key for encrypted communication
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  keys        KeyShare[]
+
+  @@map("players")
+}
+
+// MPC key information (simplified PoC)
+model MpcKey {
+  id              String   @id @default(cuid())
+  keyId           String   @unique // MPC key identifier
+  algorithm       String // ECDSA_SECP256K1, EDDSA_ED25519, etc.
+  publicKey       String // Full public key (hex)
+  chainCode       String? // HD derivation chain code
+  threshold       Int // t in t-of-n
+  totalPlayers    Int // n in t-of-n
+  tenantId        String
+  status          KeyStatus @default(GENERATING)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  shares          KeyShare[]
+  sessions        SigningSession[]
+
+  @@index([tenantId])
+  @@index([algorithm])
+  @@map("mpc_keys")
+}
+
+enum KeyStatus {
+  GENERATING
+  ACTIVE
+  REVOKED
+}
+
+// Individual participant's key share
+model KeyShare {
+  id              String   @id @default(cuid())
+  keyId           String
+  playerId        String
+  shareData       Bytes // Encrypted share data (stored in HSM)
+  hsmKeyHandle    String? // Key handle in HSM
+  auxiliaryKeys   Json? // Paillier, Ring-Pedersen keys (encrypted)
+  metadata        Json? // Additional metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  key             MpcKey   @relation(fields: [keyId], references: [keyId], onDelete: Cascade)
+  player          Player   @relation(fields: [playerId], references: [playerId])
+
+  @@unique([keyId, playerId])
+  @@map("key_shares")
+}
+
+// Signing session (simplified PoC)
+model SigningSession {
+  id              String   @id @default(cuid())
+  txId            String   @unique // Transaction ID
+  keyId           String
+  algorithm       String
+  messageHash     String // Message hash to be signed
+  derivationPath  String? // HD derivation path
+  participantIds  String[] // Array of participant player IDs
+  metadata        Json? // Additional signing metadata
+  status          SessionStatus @default(STARTED)
+  signature       String? // Final signature result (hex)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  // Relations
+  key             MpcKey   @relation(fields: [keyId], references: [keyId])
+
+  @@index([keyId])
+  @@index([status])
+  @@map("signing_sessions")
+}
+
+enum SessionStatus {
+  STARTED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
