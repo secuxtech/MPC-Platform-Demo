@@ -84,12 +84,12 @@ make -j4
 ### 3. Setup Coordinator
 
 ```bash
+# Install packages
 cd mpc-coordinator
 npm install
 
 # Configure database
 cp .env.example .env
-# Edit .env with your database credentials
 
 # Run migrations
 npx prisma db push
